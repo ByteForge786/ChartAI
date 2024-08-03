@@ -31,47 +31,74 @@ def determine_chart_type(df):
     return None
 
 # Chart generation function
-def generate_chart(df, chart_recommendation=None):
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import re
+
+def extract_axis_info(recommendation):
+    axis_info = {}
+    matches = re.findall(r'(\w+)\s+on\s+(\w+)\s+axis', recommendation, re.IGNORECASE)
+    for column, axis in matches:
+        axis_info[axis.lower()] = column
+    return axis_info
+
+def generate_chart(df, chart_recommendation):
     if chart_recommendation is None:
         chart_type = determine_chart_type(df)
+        axis_info = {'x': df.columns[0], 'y': df.columns[1] if len(df.columns) > 1 else None}
     else:
         chart_type = chart_recommendation.split('(')[0].strip().lower()
-    
+        axis_info = extract_axis_info(chart_recommendation)
+
+    x_column = axis_info.get('x', df.columns[0])
+    y_column = axis_info.get('y', df.columns[1] if len(df.columns) > 1 else None)
+
     if chart_type == 'grouped bar':
-        fig = px.bar(df, x=df.columns[0], y=[df.columns[1], df.columns[2]], 
-                     title=f"{df.columns[1]} and {df.columns[2]} by {df.columns[0]}",
+        y_columns = [col for col in df.columns if col != x_column][:2]  # Take up to 2 columns for Y
+        fig = px.bar(df, x=x_column, y=y_columns, 
+                     title=f"{' and '.join(y_columns)} by {x_column}",
                      template="plotly_white", barmode='group')
-        fig.update_layout(xaxis_title=df.columns[0], yaxis_title="Values")
+        fig.update_layout(xaxis_title=x_column, yaxis_title="Values")
+
     elif chart_type == 'bar':
-        fig = px.bar(df, x=df.columns[0], y=df.columns[1],
-                     title=f"{df.columns[1]} by {df.columns[0]}",
+        fig = px.bar(df, x=x_column, y=y_column,
+                     title=f"{y_column} by {x_column}",
                      template="plotly_white")
-        fig.update_layout(xaxis_title=df.columns[0], yaxis_title=df.columns[1])
+        fig.update_layout(xaxis_title=x_column, yaxis_title=y_column)
+
     elif chart_type == 'line':
-        fig = px.line(df, x=df.columns[0], y=df.columns[1],
-                      title=f"{df.columns[1]} over {df.columns[0]}",
+        fig = px.line(df, x=x_column, y=y_column,
+                      title=f"{y_column} over {x_column}",
                       template="plotly_white", markers=True)
-        fig.update_layout(xaxis_title=df.columns[0], yaxis_title=df.columns[1])
+        fig.update_layout(xaxis_title=x_column, yaxis_title=y_column)
+
     elif chart_type == 'pie':
-        fig = px.pie(df, names=df.columns[0], values=df.columns[1],
-                     title=f"Distribution of {df.columns[1]} by {df.columns[0]}",
+        fig = px.pie(df, names=x_column, values=y_column,
+                     title=f"Distribution of {y_column} by {x_column}",
                      template="plotly_white")
+
     elif chart_type == 'scatter':
-        fig = px.scatter(df, x=df.columns[0], y=df.columns[1],
-                         title=f"{df.columns[1]} vs {df.columns[0]}",
+        fig = px.scatter(df, x=x_column, y=y_column,
+                         title=f"{y_column} vs {x_column}",
                          template="plotly_white")
-        fig.update_layout(xaxis_title=df.columns[0], yaxis_title=df.columns[1])
+        fig.update_layout(xaxis_title=x_column, yaxis_title=y_column)
+
     elif chart_type == 'histogram':
-        fig = px.histogram(df, x=df.columns[0],
-                           title=f"Distribution of {df.columns[0]}",
+        fig = px.histogram(df, x=x_column,
+                           title=f"Distribution of {x_column}",
                            template="plotly_white")
-        fig.update_layout(xaxis_title=df.columns[0], yaxis_title="Count")
+        fig.update_layout(xaxis_title=x_column, yaxis_title="Count")
+
     else:
         st.write(f"Chart type '{chart_type}' not supported or could not be determined. Displaying data in table format:")
         st.table(df)
         return
+
     fig.update_layout(plot_bgcolor="rgba(0,0,0,0)")
     st.plotly_chart(fig, use_container_width=True)
+
+
 
 # Streamlit app
 def main():
