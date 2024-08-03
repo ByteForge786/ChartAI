@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import re
 
 # Your custom functions (to be implemented)
 def get_gemini_response(question, prompt):
@@ -19,7 +20,6 @@ def get_chart_recommendation_from_response(response):
     # Implement your chart recommendation extraction function here
     pass
 
-# Determine chart type function from your original code
 def determine_chart_type(df):
     if len(df.columns) == 2:
         if df.dtypes[1] in ['int64', 'float64'] and len(df) > 1:
@@ -30,17 +30,16 @@ def determine_chart_type(df):
         return 'line'
     return None
 
-# Chart generation function
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-import re
-
 def extract_axis_info(recommendation):
     axis_info = {}
-    matches = re.findall(r'(\w+)\s+on\s+(\w+)\s+axis', recommendation, re.IGNORECASE)
-    for column, axis in matches:
-        axis_info[axis.lower()] = column
+    # Extract the content inside parentheses
+    content = re.search(r'\((.*?)\)', recommendation)
+    if content:
+        content = content.group(1)
+        # Find all matches of "column on axis" pattern
+        matches = re.findall(r'(\w+)\s+on\s+(\w+)\s+axis', content, re.IGNORECASE)
+        for column, axis in matches:
+            axis_info[axis.lower()] = column
     return axis_info
 
 def generate_chart(df, chart_recommendation):
@@ -97,8 +96,6 @@ def generate_chart(df, chart_recommendation):
 
     fig.update_layout(plot_bgcolor="rgba(0,0,0,0)")
     st.plotly_chart(fig, use_container_width=True)
-
-
 
 # Streamlit app
 def main():
