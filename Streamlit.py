@@ -2,23 +2,48 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import re
+import logging
+import ctranslate2
+import transformers
+from huggingface_hub import snapshot_download
 
-# Your custom functions (to be implemented)
-def get_gemini_response(question, prompt):
-    # Implement your Gemini response function here
-    pass
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-def read_sql_query(sql, db):
-    # Implement your SQL query function here
-    pass
+# Cache the model
+@st.cache_resource
+def load_model():
+    try:
+        model_id = "ByteForge/Defog_llama-3-sqlcoder-8b-ct2-int8_float16"
+        model_path = snapshot_download(model_id)
+        model = ctranslate2.Generator(model_path)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(model_id)
+        return model, tokenizer
+    except Exception as e:
+        logger.error(f"Failed to load model: {str(e)}")
+        st.error("Failed to load model. Please check the logs for details.")
+        return None, None
+
+def get_model_response(question, prompt, model, tokenizer):
+    try:
+        full_prompt = prompt + question
+        input_tokens = tokenizer.convert_ids_to_tokens(tokenizer.encode(full_prompt))
+        results = model.generate_batch([input_tokens], max_length=1024, sampling_topk=10)
+        output_text = tokenizer.decode(results[0].sequences_ids[0])
+        return output_text
+    except Exception as e:
+        logger.error(f"Error getting model response: {str(e)}")
+        st.error("Failed to get a response from the model. Please check the logs for details.")
+        return None
 
 def get_sql_query_from_response(response):
-    # Implement your SQL query extraction function here
-    pass
+    match = re.search(r'```sql\n(.*?)\n```', response, re.DOTALL)
+    return match.group(1) if match else None
 
 def get_chart_recommendation_from_response(response):
-    # Implement your chart recommendation extraction function here
-    pass
+    match = re.search(r'Chart recommendation: (.*?)$', response, re.MULTILINE)
+    return match.group(1) if match else None
 
 def determine_chart_type(df):
     if len(df.columns) == 2:
@@ -30,58 +55,43 @@ def determine_chart_type(df):
         return 'line'
     return None
 
-def extract_axis_info(recommendation):
-    axis_info = {}
-    # Extract the content inside parentheses
-    content = re.search(r'\((.*?)\)', recommendation)
-    if content:
-        content = content.group(1)
-        # Find all matches of "column on axis" pattern
-        matches = re.findall(r'(\w+)\s+on\s+(\w+)\s+axis', content, re.IGNORECASE)
-        for column, axis in matches:
-            axis_info[axis.lower()] = column
-    return axis_info
-
 def generate_chart(df, chart_recommendation):
     if chart_recommendation is None:
         chart_type = determine_chart_type(df)
-        axis_info = {'x': df.columns[0], 'y': df.columns[1] if len(df.columns) > 1 else None}
     else:
         chart_type = chart_recommendation.split('(')[0].strip().lower()
-        axis_info = extract_axis_info(chart_recommendation)
 
-    x_column = axis_info.get('x', df.columns[0])
-    y_column = axis_info.get('y', df.columns[1] if len(df.columns) > 1 else None)
+    x_column = df.columns[0]
+    y_columns = df.columns[1:]
 
     if chart_type == 'grouped bar':
-        y_columns = [col for col in df.columns if col != x_column][:2]  # Take up to 2 columns for Y
         fig = px.bar(df, x=x_column, y=y_columns, 
-                     title=f"{' and '.join(y_columns)} by {x_column}",
+                     title=f"{', '.join(y_columns)} by {x_column}",
                      template="plotly_white", barmode='group')
         fig.update_layout(xaxis_title=x_column, yaxis_title="Values")
 
     elif chart_type == 'bar':
-        fig = px.bar(df, x=x_column, y=y_column,
-                     title=f"{y_column} by {x_column}",
+        fig = px.bar(df, x=x_column, y=y_columns[0],
+                     title=f"{y_columns[0]} by {x_column}",
                      template="plotly_white")
-        fig.update_layout(xaxis_title=x_column, yaxis_title=y_column)
+        fig.update_layout(xaxis_title=x_column, yaxis_title=y_columns[0])
 
     elif chart_type == 'line':
-        fig = px.line(df, x=x_column, y=y_column,
-                      title=f"{y_column} over {x_column}",
+        fig = px.line(df, x=x_column, y=y_columns,
+                      title=f"{', '.join(y_columns)} over {x_column}",
                       template="plotly_white", markers=True)
-        fig.update_layout(xaxis_title=x_column, yaxis_title=y_column)
+        fig.update_layout(xaxis_title=x_column, yaxis_title="Values")
 
     elif chart_type == 'pie':
-        fig = px.pie(df, names=x_column, values=y_column,
-                     title=f"Distribution of {y_column} by {x_column}",
+        fig = px.pie(df, names=x_column, values=y_columns[0],
+                     title=f"Distribution of {y_columns[0]} by {x_column}",
                      template="plotly_white")
 
     elif chart_type == 'scatter':
-        fig = px.scatter(df, x=x_column, y=y_column,
-                         title=f"{y_column} vs {x_column}",
+        fig = px.scatter(df, x=x_column, y=y_columns[0],
+                         title=f"{y_columns[0]} vs {x_column}",
                          template="plotly_white")
-        fig.update_layout(xaxis_title=x_column, yaxis_title=y_column)
+        fig.update_layout(xaxis_title=x_column, yaxis_title=y_columns[0])
 
     elif chart_type == 'histogram':
         fig = px.histogram(df, x=x_column,
@@ -103,39 +113,47 @@ def main():
 
     st.title("Data Query and Visualization App")
 
-    # Your prompt and database path (to be filled)
+    # Load cached model
+    model, tokenizer = load_model()
+
+    if model is None or tokenizer is None:
+        st.stop()
+
+    # Your prompt (to be filled)
     prompt = ["Your prompt here"]
-    database_path = "Your database path here"
 
     # User input
     question = st.text_input("Enter your question:")
 
     if st.button("Submit"):
         if question:
-            # Get response from Gemini
-            response = get_gemini_response(question, prompt)
-
-            # Extract SQL query and chart recommendation
-            sql_query = get_sql_query_from_response(response)
-            chart_recommendation = get_chart_recommendation_from_response(response)
+            with st.spinner("Generating SQL query..."):
+                response = get_model_response(question, prompt, model, tokenizer)
+                sql_query = get_sql_query_from_response(response)
+                chart_recommendation = get_chart_recommendation_from_response(response)
 
             if sql_query:
                 st.subheader("Generated SQL Query:")
                 st.code(sql_query, language="sql")
 
-                # Execute SQL query
-                df = read_sql_query(sql_query, database_path)
+                with st.spinner("Executing query..."):
+                    # This is where you would run your SQL query on Snowflake
+                    # and get the result_df. For now, we'll use a dummy DataFrame.
+                    result_df = pd.DataFrame({
+                        'Column1': ['A', 'B', 'C'],
+                        'Column2': [10, 20, 30]
+                    })
 
-                if not df.empty:
+                if not result_df.empty:
                     col1, col2 = st.columns(2)
 
                     with col1:
                         st.subheader("Query Results:")
-                        st.dataframe(df)
+                        st.dataframe(result_df)
 
                     with col2:
                         st.subheader("Visualization:")
-                        generate_chart(df, chart_recommendation)
+                        generate_chart(result_df, chart_recommendation)
                 else:
                     st.warning("No results found for the given query.")
             else:
