@@ -1,14 +1,14 @@
-import re
+ import re
 
 def get_chart_type(sentence):
-    keywords = ['bar', 'grouped bar', 'line', 'scatter', 'histogram', 'pie']
+    keywords = ['grouped bar', 'bar', 'line', 'scatter', 'histogram', 'pie']
     
     # Convert the input sentence to lowercase
     sentence_lower = sentence.lower()
     
     # Create regex patterns for each keyword
     patterns = [
-        r'\b' + re.escape(keyword.replace(' ', r'\s*')) + r'\b'
+        r'\b' + re.escape(keyword).replace(r'\ ', r'\s+') + r'\b'
         for keyword in keywords
     ]
     
@@ -22,7 +22,7 @@ def get_chart_type(sentence):
 # Example usage
 sentences = [
     "I think a Bar chart would be good for this data.",
-    "A Grouped    Bar chart might show the comparison better.",
+    "A Grouped Bar chart might show the comparison better.",
     "Let's use a line graph to show the trend.",
     "A pie chart isn't suitable for this dataset.",
     "We should visualize this with a histogram.",
@@ -30,7 +30,8 @@ sentences = [
     "A scatter plot would work well here.",
     "Maybe a GROUPED-BAR chart?",
     "How about a BAR-CHART?",
-    "A Line-Graph could show the trend."
+    "A Line-Graph could show the trend.",
+    "A simple bar graph will suffice."
 ]
 
 for sentence in sentences:
