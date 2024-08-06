@@ -43,21 +43,22 @@ df_time_series = pd.DataFrame({
 
 # Test cases
 test_cases = [
-    (df_bar, "What are the top categories by value?", "bar"),
-    (df_grouped_bar, "How do different groups perform across categories?", "grouped bar"),
-    (df_line, "How have the metrics changed over time?", "line"),
-    (df_pie, "What is the distribution of values across categories?", "pie"),
-    (df_bar, "What is the average value across categories?", "bar"),
-    (df_time_series, "What is the overall trend in the time series?", "line")
+    (df_bar, "What are the top categories by value?", "SELECT Category, Value FROM table ORDER BY Value DESC", "Bar chart (vertical)"),
+    (df_grouped_bar, "How do different groups perform across categories?", "SELECT Category, Group, Value FROM table", "Grouped bar chart"),
+    (df_line, "How have the metrics changed over time?", "SELECT Date, Metric1, Metric2 FROM table", "Line chart"),
+    (df_pie, "What is the distribution of values across categories?", "SELECT Category, Value FROM table", "Pie chart"),
+    (df_bar, "What is the average value across categories?", "SELECT AVG(Value) as AvgValue FROM table", "Bar chart (horizontal)"),
+    (df_time_series, "What is the overall trend in the time series?", "SELECT Date, Value FROM table ORDER BY Date", "Line chart")
 ]
 
 # Run tests
-for df, question, chart_type in test_cases:
-    print(f"\nTesting {chart_type} chart:")
+for df, question, sql_query, chart_recommendation in test_cases:
+    print(f"\nTesting {chart_recommendation}:")
     print("DataFrame:")
     print(df)
     print("\nQuestion:", question)
-    insights = analyze_query_results(df, question, chart_type)
+    print("SQL Query:", sql_query)
+    insights = analyze_query_results(df, question, sql_query, chart_recommendation)
     print("\nInsights:")
     print(insights)
     print("-" * 50)
@@ -71,7 +72,8 @@ print("\nTesting Pareto principle:")
 print("DataFrame:")
 print(df_pareto)
 print("\nQuestion: What is the Pareto distribution?")
-insights = analyze_query_results(df_pareto, "What is the Pareto distribution?", "bar")
+sql_query_pareto = "SELECT Category, Value FROM table ORDER BY Value DESC"
+insights = analyze_query_results(df_pareto, "What is the Pareto distribution?", sql_query_pareto, "Bar chart (vertical)")
 print("\nInsights:")
 print(insights)
 print("-" * 50)
@@ -85,7 +87,8 @@ print("\nTesting variance analysis:")
 print("DataFrame:")
 print(df_variance)
 print("\nQuestion: What is the variance in values?")
-insights = analyze_query_results(df_variance, "What is the variance in values?", "bar")
+sql_query_variance = "SELECT Category, Value FROM table"
+insights = analyze_query_results(df_variance, "What is the variance in values?", sql_query_variance, "Bar chart (vertical)")
 print("\nInsights:")
 print(insights)
 print("-" * 50)
