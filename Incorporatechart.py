@@ -106,3 +106,12 @@ if st.button(f"Ask", use_container_width=True, key=f'question{i}'):
         st.error("An error occurred while processing your query. Please try again.")
 
 
+
+def execute_query(sql):
+    # This is a mock implementation. Replace with actual query execution.
+    df = pd.DataFrame({'Column1': ['Data1', 'Data2'], 'Column2': [1, 2]})
+    chart_recommendation = determine_chart_type(df)
+    return df, chart_recommendation
+
+
+
