@@ -50,3 +50,59 @@ for entry in st.session_state['chat_history']:
         st.dataframe(entry['result'])
         if entry['chart'] is not None:
             st.plotly_chart(entry['chart'], use_container_width=True)
+
+
+
+if st.button("🚀 Generate SQL", key="generate_sql", use_container_width=True):
+    if user_input:
+        user_input_placeholder.markdown(user_input)
+        try:
+            with st.spinner("Generating SQL..."):
+                sql_response = generate_sql(user_input)
+            bot_response_1_placeholder.code(sql_response, language="sql")
+            result_df, chart_recommendation = execute_query(sql_response)
+            bot_response_2_placeholder.dataframe(result_df)
+            
+            chart_placeholder = st.empty()
+            try:
+                with st.spinner("Generating visualization..."):
+                    fig = generate_chart(result_df, chart_recommendation)
+                    if fig:
+                        chart_placeholder.plotly_chart(fig, use_container_width=True)
+            except Exception as e:
+                logging.error(f"Error generating chart: {str(e)}")
+                st.error("An error occurred while generating the chart.")
+            
+            handle_interaction(user_input, sql_response)
+            add_to_chat_history(user_input, sql_response, result_df, fig if 'fig' in locals() else None)
+        except Exception as e:
+            logging.error(f"Error processing query: {str(e)}")
+            st.error("An error occurred while processing your query. Please try again.")
+
+
+if st.button(f"Ask", use_container_width=True, key=f'question{i}'):
+    user_input_placeholder.markdown(question)
+    try:
+        with st.spinner("Generating SQL..."):
+            sql_response = generate_sql(question)
+        bot_response_1_placeholder.code(sql_response, language="sql")
+        result_df, chart_recommendation = execute_query(sql_response)
+        bot_response_2_placeholder.dataframe(result_df)
+        
+        chart_placeholder = st.empty()
+        try:
+            with st.spinner("Generating visualization..."):
+                fig = generate_chart(result_df, chart_recommendation)
+                if fig:
+                    chart_placeholder.plotly_chart(fig, use_container_width=True)
+        except Exception as e:
+            logging.error(f"Error generating chart: {str(e)}")
+            st.error("An error occurred while generating the chart.")
+        
+        handle_interaction(question, sql_response)
+        add_to_chat_history(question, sql_response, result_df, fig if 'fig' in locals() else None)
+    except Exception as e:
+        logging.error(f"Error processing sample question: {str(e)}")
+        st.error("An error occurred while processing your query. Please try again.")
+
+
