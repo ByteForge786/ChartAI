@@ -36,55 +36,54 @@ def generate_chart(df, chart_recommendation):
         else:
             chart_type = chart_recommendation.split('(')[0].strip().lower()
 
-        # Identify numeric and non-numeric columns
-        numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
-        non_numeric_cols = df.select_dtypes(exclude=['int64', 'float64']).columns
+        x_column = df.columns[0]
+        y_columns = df.columns[1:]
+
+        # Add support for multiple grouping columns
+        group_columns = df.columns[:-1] if len(df.columns) > 2 else [x_column]
 
         if chart_type == 'grouped bar':
-            fig = px.bar(df, x=non_numeric_cols.tolist(), y=numeric_cols[0], 
-                         color=non_numeric_cols[-1],
-                         title=f"{numeric_cols[0]} by {', '.join(non_numeric_cols)}",
+            fig = px.bar(df, x=group_columns, y=y_columns, 
+                         title=f"{', '.join(y_columns)} by {', '.join(group_columns)}",
                          template="plotly_white", barmode='group')
-            fig.update_layout(xaxis_title=', '.join(non_numeric_cols[:-1]), yaxis_title="Values")
+            fig.update_layout(xaxis_title=', '.join(group_columns), yaxis_title="Values")
 
         elif chart_type == 'bar':
-            fig = px.bar(df, x=non_numeric_cols.tolist(), y=numeric_cols[0],
-                         color=non_numeric_cols[-1] if len(non_numeric_cols) > 1 else None,
-                         title=f"{numeric_cols[0]} by {', '.join(non_numeric_cols)}",
+            fig = px.bar(df, x=group_columns, y=y_columns[0],
+                         title=f"{y_columns[0]} by {', '.join(group_columns)}",
                          template="plotly_white")
-            fig.update_layout(xaxis_title=', '.join(non_numeric_cols[:-1]), yaxis_title=numeric_cols[0])
+            fig.update_layout(xaxis_title=', '.join(group_columns), yaxis_title=y_columns[0])
 
         elif chart_type == 'line':
-            fig = px.line(df, x=non_numeric_cols[0], y=numeric_cols[0],
-                          color=non_numeric_cols[-1] if len(non_numeric_cols) > 1 else None,
-                          title=f"{numeric_cols[0]} over {', '.join(non_numeric_cols)}",
+            fig = px.line(df, x=x_column, y=y_columns,
+                          color=group_columns[-1] if len(group_columns) > 1 else None,
+                          title=f"{', '.join(y_columns)} over {', '.join(group_columns)}",
                           template="plotly_white", markers=True)
-            fig.update_layout(xaxis_title=non_numeric_cols[0], yaxis_title="Values")
+            fig.update_layout(xaxis_title=x_column, yaxis_title="Values")
 
         elif chart_type == 'pie':
-            if len(non_numeric_cols) > 1:
-                fig = px.sunburst(df, path=non_numeric_cols, values=numeric_cols[0],
-                                  title=f"Distribution of {numeric_cols[0]} by {', '.join(non_numeric_cols)}",
+            if len(group_columns) > 1:
+                fig = px.sunburst(df, path=group_columns, values=y_columns[0],
+                                  title=f"Distribution of {y_columns[0]} by {', '.join(group_columns)}",
                                   template="plotly_white")
             else:
-                fig = px.pie(df, names=non_numeric_cols[0], values=numeric_cols[0],
-                             title=f"Distribution of {numeric_cols[0]} by {non_numeric_cols[0]}",
+                fig = px.pie(df, names=x_column, values=y_columns[0],
+                             title=f"Distribution of {y_columns[0]} by {x_column}",
                              template="plotly_white")
 
         elif chart_type == 'scatter':
-            fig = px.scatter(df, x=numeric_cols[0], y=numeric_cols[1] if len(numeric_cols) > 1 else numeric_cols[0],
-                             color=non_numeric_cols[-1] if len(non_numeric_cols) > 0 else None,
-                             title=f"{numeric_cols[1] if len(numeric_cols) > 1 else numeric_cols[0]} vs {numeric_cols[0]}",
+            fig = px.scatter(df, x=x_column, y=y_columns[0],
+                             color=group_columns[-1] if len(group_columns) > 1 else None,
+                             title=f"{y_columns[0]} vs {x_column}",
                              template="plotly_white")
-            fig.update_layout(xaxis_title=numeric_cols[0], 
-                              yaxis_title=numeric_cols[1] if len(numeric_cols) > 1 else numeric_cols[0])
+            fig.update_layout(xaxis_title=x_column, yaxis_title=y_columns[0])
 
         elif chart_type == 'histogram':
-            fig = px.histogram(df, x=numeric_cols[0],
-                               color=non_numeric_cols[-1] if len(non_numeric_cols) > 0 else None,
-                               title=f"Distribution of {numeric_cols[0]}",
+            fig = px.histogram(df, x=x_column,
+                               color=group_columns[-1] if len(group_columns) > 1 else None,
+                               title=f"Distribution of {x_column}",
                                template="plotly_white")
-            fig.update_layout(xaxis_title=numeric_cols[0], yaxis_title="Count")
+            fig.update_layout(xaxis_title=x_column, yaxis_title="Count")
 
         else:
             fig = fallback_chart(df)
