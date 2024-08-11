@@ -39,13 +39,21 @@ def generate_chart(df, sql_query, chart_recommendation=None):
         if len(analysis['categorical_cols']) >= 1 and len(analysis['numeric_cols']) >= 1:
             x = analysis['categorical_cols'][0]
             y = analysis['numeric_cols']
-            if len(analysis['categorical_cols']) > 1:
+            if len(analysis['categorical_cols']) == 1:
+                return px.bar(df, x=x, y=y, title=f"{', '.join(y)} by {x}", 
+                              barmode='group' if len(y) > 1 else None)
+            elif len(analysis['categorical_cols']) == 2:
                 color = analysis['categorical_cols'][1]
-                return px.bar(df, x=x, y=y, color=color, 
-                              title=f"{', '.join(y)} by {x} and {color}", barmode='group')
-            else:
-                return px.bar(df, x=x, y=y, 
-                              title=f"{', '.join(y)} by {x}", barmode='group' if len(y) > 1 else None)
+                return px.bar(df, x=x, y=y[0], color=color, 
+                              title=f"{y[0]} by {x} and {color}", barmode='group')
+            else:  # 3 or more categorical columns
+                color = analysis['categorical_cols'][1]
+                facet_col = analysis['categorical_cols'][2]
+                fig = px.bar(df, x=x, y=y[0], color=color, facet_col=facet_col,
+                             title=f"{y[0]} by {x}, {color}, and {facet_col}", barmode='group')
+                for annotation in fig.layout.annotations:
+                    annotation.text = annotation.text.split("=")[-1]
+                return fig
         return None
 
     def create_line_chart(df, analysis):
@@ -59,11 +67,11 @@ def generate_chart(df, sql_query, chart_recommendation=None):
 
     def create_scatter_chart(df, analysis):
         if len(analysis['numeric_cols']) >= 2:
+            x, y = analysis['numeric_cols'][:2]
             color = analysis['categorical_cols'][0] if analysis['categorical_cols'] else None
             size = analysis['numeric_cols'][2] if len(analysis['numeric_cols']) > 2 else None
-            return px.scatter(df, x=analysis['numeric_cols'][0], y=analysis['numeric_cols'][1],
-                              color=color, size=size,
-                              title=f"{analysis['numeric_cols'][1]} vs {analysis['numeric_cols'][0]}")
+            return px.scatter(df, x=x, y=y, color=color, size=size,
+                              title=f"{y} vs {x}")
         return None
 
     def create_heatmap(df, analysis):
@@ -82,11 +90,11 @@ def generate_chart(df, sql_query, chart_recommendation=None):
                           title=f"Distribution of {analysis['numeric_cols'][0]} by {analysis['categorical_cols'][0]}")
         return None
 
-    def fallback_chart(df, analysis):
-        if analysis['total_cols'] <= 10 and analysis['total_rows'] <= 50:
-            return px.table(df, title="Data Table")
-        else:
-            return px.scatter_matrix(df, dimensions=analysis['numeric_cols'][:4], title="Scatter Matrix")
+    def create_histogram(df, analysis):
+        if len(analysis['numeric_cols']) >= 1:
+            return px.histogram(df, x=analysis['numeric_cols'][0], 
+                                title=f"Distribution of {analysis['numeric_cols'][0]}")
+        return None
 
     chart_functions = {
         'pie': create_pie_chart,
@@ -94,12 +102,14 @@ def generate_chart(df, sql_query, chart_recommendation=None):
         'line': create_line_chart,
         'scatter': create_scatter_chart,
         'heatmap': create_heatmap,
-        'box': create_box_plot
+        'box': create_box_plot,
+        'histogram': create_histogram
     }
 
     fig = None
+    error_flag = False
 
-    # Try recommended chart first with error handling
+    # Try recommended chart first
     if chart_recommendation:
         try:
             chart_type = chart_recommendation.lower()
@@ -110,9 +120,10 @@ def generate_chart(df, sql_query, chart_recommendation=None):
                     fig = chart_functions[chart_type](df, df_analysis)
         except Exception as e:
             print(f"Error creating recommended chart: {str(e)}")
+            error_flag = True
 
     # If recommended chart failed or wasn't specified, try other charts
-    if fig is None:
+    if fig is None and not error_flag:
         for func_name, func in chart_functions.items():
             try:
                 if func_name == 'bar':
@@ -123,21 +134,21 @@ def generate_chart(df, sql_query, chart_recommendation=None):
                     break
             except Exception as e:
                 print(f"Error creating {func_name} chart: {str(e)}")
+                error_flag = True
 
-    # Fallback mechanism
-    if fig is None:
-        try:
-            fig = fallback_chart(df, df_analysis)
-        except Exception as e:
-            print(f"Error creating fallback chart: {str(e)}")
-
-    # Update layout and return the figure
+    # Update layout if figure was created
     if fig:
         fig.update_layout(plot_bgcolor="rgba(0,0,0,0)")
     
-    return fig
+    return fig, error_flag
 
 # Example usage
-# sql_query = "SELECT category1, category2, SUM(value1) as total, SUM(value2) as active FROM table GROUP BY category1, category2"
+# sql_query = "SELECT category1, category2, category3, SUM(value) as total FROM table GROUP BY category1, category2, category3"
 # df = pd.DataFrame(...)  # Your dataframe from SQL query result
-# fig = generate_chart(df, sql_query, "Bar")
+# fig, error_flag = generate_chart(df, sql_query, "Bar")
+# if fig:
+#     fig.show()
+# elif error_flag:
+#     print("An error occurred while creating the chart.")
+# else:
+#     print("No suitable chart could be created for this data.")
