@@ -1,14 +1,27 @@
-import re
-from dateutil import parser
-from dateutil.parser import ParserError
+ import re
+from datetime import datetime
 
-import re
-from dateutil import parser
-from dateutil.parser import ParserError
+def parse_date(date_str):
+    # Try different date formats
+    date_formats = [
+        "%d %b %Y",  # 1 Jan 2024
+        "%d %B %Y",  # 1 January 2024
+        "%B %d, %Y", # January 1, 2024
+        "%m/%d/%Y",  # 01/01/2024
+        "%Y-%m-%d"   # 2024-01-01
+    ]
+    
+    for fmt in date_formats:
+        try:
+            return datetime.strptime(date_str.strip(), fmt)
+        except ValueError:
+            continue
+    
+    raise ValueError(f"Unable to parse date: {date_str}")
 
 def parse_date_range(question):
-    # Updated pattern with UTF-8 compatible dash characters
-    date_pattern = r'\b(?:from|between)?\s*(\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?|(?:0?[1-9]|1[0-2])[/-](?:0?[1-9]|[12][0-9]|3[01]))(?:[,\s]+\d{4})?\s*(?:to|[-\u2013\u2014])\s*(\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?|(?:0?[1-9]|1[0-2])[/-](?:0?[1-9]|[12][0-9]|3[01]))(?:[,\s]+\d{4})?\b'
+    # Updated pattern to match various date formats
+    date_pattern = r'\b(?:from|between)?\s*(\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2},?\s+\d{4}|\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2})\s*(?:to|[-\u2013\u2014])\s*(\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2},?\s+\d{4}|\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2})\b'
 
     matches = re.findall(date_pattern, question, re.IGNORECASE)
     
@@ -18,15 +31,10 @@ def parse_date_range(question):
     start_date_str, end_date_str = matches[0]
 
     try:
-        # Parse dates
-        start_date = parser.parse(start_date_str, fuzzy=False)
-        end_date = parser.parse(end_date_str, fuzzy=False)
-    except ParserError:
-        return None, None, "Unable to parse the dates. Please provide full dates including the year (e.g., 1 Jan 2024 to 3 Jan 2024)."
-
-    # Check if year is present in the original strings
-    if not (re.search(r'\d{4}', start_date_str) and re.search(r'\d{4}', end_date_str)):
-        return None, None, "Please provide full dates including the year for both start and end dates."
+        start_date = parse_date(start_date_str)
+        end_date = parse_date(end_date_str)
+    except ValueError as e:
+        return None, None, str(e)
 
     # Validate date range
     if start_date > end_date:
