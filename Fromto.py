@@ -1,15 +1,34 @@
 import re
 from dateutil import parser
 from dateutil.parser import ParserError
+from datetime import datetime
 
 def parse_date(date_str):
+    # Remove ordinal suffixes
+    date_str = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', date_str)
+    
     try:
+        # Try parsing with dateutil
         return parser.parse(date_str, fuzzy=False)
     except ParserError:
-        raise ValueError(f"Unable to parse date: {date_str}")
+        # If dateutil fails, try custom parsing
+        months = {
+            'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+            'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+        }
+        
+        pattern = r'(\d{1,2})\s+([a-zA-Z]{3,9})\s+(\d{4})'
+        match = re.search(pattern, date_str)
+        
+        if match:
+            day, month, year = match.groups()
+            month = months.get(month[:3].lower())
+            if month:
+                return datetime(int(year), month, int(day))
+    
+    raise ValueError(f"Unable to parse date: {date_str}")
 
 def parse_date_range(question):
-    # Updated pattern to match various date formats
     date_pattern = r'\b(?:from|between)?\s*((?:\d{1,2}(?:st|nd|rd|th)?\s+)?(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}|\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2})\s*(?:to|[-\u2013\u2014])\s*((?:\d{1,2}(?:st|nd|rd|th)?\s+)?(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}|\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2})\b'
 
     matches = re.findall(date_pattern, question, re.IGNORECASE)
@@ -30,8 +49,6 @@ def parse_date_range(question):
         return None, None, "Invalid date range. The start date should be before the end date."
 
     return start_date, end_date, "Date range found and parsed successfully."
-
-
 
 def test_parse_date_range():
     test_cases = [
