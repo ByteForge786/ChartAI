@@ -2,9 +2,13 @@ import re
 from dateutil import parser
 from dateutil.parser import ParserError
 
+import re
+from dateutil import parser
+from dateutil.parser import ParserError
+
 def parse_date_range(question):
-    # Updated pattern to include more date formats
-    date_pattern = r'\b(?:from|between)?\s*(\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?|(?:0?[1-9]|1[0-2])[/-](?:0?[1-9]|[12][0-9]|3[01]))(?:[,\s]+\d{4})?\s*(?:to|[-–—])\s*(\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?|(?:0?[1-9]|1[0-2])[/-](?:0?[1-9]|[12][0-9]|3[01]))(?:[,\s]+\d{4})?\b'
+    # Updated pattern with UTF-8 compatible dash characters
+    date_pattern = r'\b(?:from|between)?\s*(\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?|(?:0?[1-9]|1[0-2])[/-](?:0?[1-9]|[12][0-9]|3[01]))(?:[,\s]+\d{4})?\s*(?:to|[-\u2013\u2014])\s*(\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?|(?:0?[1-9]|1[0-2])[/-](?:0?[1-9]|[12][0-9]|3[01]))(?:[,\s]+\d{4})?\b'
 
     matches = re.findall(date_pattern, question, re.IGNORECASE)
     
@@ -29,7 +33,7 @@ def parse_date_range(question):
         return None, None, "Invalid date range. The start date should be before the end date."
 
     return start_date, end_date, "Date range found and parsed successfully."
-
+    
 def test_parse_date_range():
     test_cases = [
         ("What happened from 1 Jan 2024 to 3 Jan 2024?", True),
