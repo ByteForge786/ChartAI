@@ -47,6 +47,8 @@ import re
 
 import re
 
+import re
+
 def contains_date_range(question):
     # Patterns to match various date formats
     date_patterns = [
@@ -63,7 +65,7 @@ def contains_date_range(question):
     
     # Regex to match 'from date to date' or 'between date and date' with very flexible spacing
     range_pattern = re.compile(
-        r'(from|between)\s*(' + date_pattern + r')\s*(?:to|and|-|–|—)\s*(' + date_pattern + r')',
+        r'(from|between)\s*(' + date_pattern + r')\s*(?:to|and|-)\s*(' + date_pattern + r')',
         re.IGNORECASE | re.VERBOSE
     )
     
