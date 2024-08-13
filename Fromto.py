@@ -49,15 +49,17 @@ import re
 
 import re
 
+import re
+
 def contains_date_range(question):
-    # Patterns to match various date formats
+    # Patterns to match various date formats with flexible spacing
     date_patterns = [
-        r'\b(\d{1,2})(?:st|nd|rd|th)?\s*[\/\.\-\s]\s*(\d{1,2})(?:st|nd|rd|th)?\s*[\/\.\-\s]\s*(\d{2,4})\b',  # DD/MM/YYYY or similar
-        r'\b(\d{1,2})(?:st|nd|rd|th)?\s*(?:of)?\s*(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s*(?:,?\s*(\d{4}))?\b',  # 3rd March 2024 or 3 March
-        r'\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s*(\d{1,2})(?:st|nd|rd|th)?\s*(?:,?\s*(\d{4}))?\b',  # March 3rd, 2024 or March 3
-        r'\b(\d{4})[\/\.\-\s](\d{1,2})[\/\.\-\s](\d{1,2})\b',  # YYYY-MM-DD or YYYY/MM/DD
-        r'\b(\d{4})(\d{2})(\d{2})\b',  # YYYYMMDD or similar
-        r'\b(\d{2})(\d{2})(\d{4})\b',  # DDMMYYYY or similar
+        r'\b(\d{1,2})\s*(?:st|nd|rd|th)?\s*[\/\.\-\s]\s*(\d{1,2})\s*(?:st|nd|rd|th)?\s*[\/\.\-\s]\s*(\d{2,4})\b',  # DD/MM/YYYY or similar
+        r'\b(\d{1,2})\s*(?:st|nd|rd|th)?\s*(?:of)?\s*(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s*(?:,?\s*(\d{4}))?\b',  # 3rd March 2024 or 3 March
+        r'\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s*(\d{1,2})\s*(?:st|nd|rd|th)?\s*(?:,?\s*(\d{4}))?\b',  # March 3rd, 2024 or March 3
+        r'\b(\d{4})\s*[\/\.\-\s]\s*(\d{1,2})\s*[\/\.\-\s]\s*(\d{1,2})\b',  # YYYY-MM-DD or YYYY/MM/DD
+        r'\b(\d{4})\s*(\d{2})\s*(\d{2})\b',  # YYYYMMDD or similar
+        r'\b(\d{2})\s*(\d{2})\s*(\d{4})\b',  # DDMMYYYY or similar
     ]
     
     # Join the patterns with more flexible spacing
@@ -95,6 +97,9 @@ questions = [
     "Between the 1st of May and the 3rd of June",                         # 'of' in date
     "From 2023.06.01 to 2023.06.30",                                      # Dot as separator
     "Between 1 Jan and 31 Dec 2024",                                      # Short month names without year in first date
+    "From 4 th   June to 5  th    June 2024",                             # Very weird spacing
+    "Between 15    08    2024 and 18   08   2024",                        # Spaces between date components
+    "From 2023  -  06  -  01 to 2023  -  06  -  30",                      # Spaces around separators
 ]
 
 for q in questions:
