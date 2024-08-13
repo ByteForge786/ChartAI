@@ -45,21 +45,28 @@ for q in questions:
 
 import re
 
+import re
+
 def contains_date_range(question):
     # Patterns to match various date formats
     date_patterns = [
-        r'\b(\d{1,2})[\/\-\s](\d{1,2})[\/\-\s](\d{2,4})\b',  # DD/MM/YYYY or similar
-        r'\b(\d{1,2})(?:st|nd|rd|th)?[ ]*(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[ ]*(\d{4})?\b',  # 3rd March 2024 or 3 March
-        r'\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[ ]*(\d{1,2})(?:st|nd|rd|th)?[ ]*(\d{4})?\b',  # March 3rd, 2024 or March 3
-        r'\b(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})\b',  # YYYY-MM-DD or YYYY/MM/DD
+        r'\b(\d{1,2})(?:st|nd|rd|th)?\s*[\/\.\-\s]\s*(\d{1,2})(?:st|nd|rd|th)?\s*[\/\.\-\s]\s*(\d{2,4})\b',  # DD/MM/YYYY or similar
+        r'\b(\d{1,2})(?:st|nd|rd|th)?\s*(?:of)?\s*(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s*(?:,?\s*(\d{4}))?\b',  # 3rd March 2024 or 3 March
+        r'\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s*(\d{1,2})(?:st|nd|rd|th)?\s*(?:,?\s*(\d{4}))?\b',  # March 3rd, 2024 or March 3
+        r'\b(\d{4})[\/\.\-\s](\d{1,2})[\/\.\-\s](\d{1,2})\b',  # YYYY-MM-DD or YYYY/MM/DD
         r'\b(\d{4})(\d{2})(\d{2})\b',  # YYYYMMDD or similar
         r'\b(\d{2})(\d{2})(\d{4})\b',  # DDMMYYYY or similar
     ]
-    # Regex to match 'from date to date' or 'between date and date' with flexible spacing
+    
+    # Join the patterns with more flexible spacing
+    date_pattern = '|'.join(f'(?:{pattern})' for pattern in date_patterns)
+    
+    # Regex to match 'from date to date' or 'between date and date' with very flexible spacing
     range_pattern = re.compile(
-        r'(from|between)\s+(' + '|'.join(date_patterns) + r')\s*(?:to|and|-)\s*(' + '|'.join(date_patterns) + r')',
-        re.IGNORECASE
+        r'(from|between)\s*(' + date_pattern + r')\s*(?:to|and|-|–|—)\s*(' + date_pattern + r')',
+        re.IGNORECASE | re.VERBOSE
     )
+    
     if range_pattern.search(question):
         return True
     else:
@@ -82,6 +89,10 @@ questions = [
     "Can you schedule a meeting from   3 March    to     4 March 2024?",  # Extra spaces
     "Please book the venue between 06/07/2024    and    10/07/2024.",     # Extra spaces
     "Let's block dates from 06-12-2024  -  10-12-2024.",                  # Dash separator with spaces
+    "From 4th June to 5 th June 2024",                                    # Spaces in ordinal
+    "Between the 1st of May and the 3rd of June",                         # 'of' in date
+    "From 2023.06.01 to 2023.06.30",                                      # Dot as separator
+    "Between 1 Jan and 31 Dec 2024",                                      # Short month names without year in first date
 ]
 
 for q in questions:
