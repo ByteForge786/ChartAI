@@ -131,3 +131,32 @@ def generate_chart(df, chart_recommendation):
         if fig:
             fig.update_layout(plot_bgcolor="rgba(0,0,0,0)")
             st.plotly_chart(fig, use_container_width=True)
+
+
+
+
+elif chart_type == 'pie':
+    if len(categorical_cols) > 0 and len(numeric_cols) > 0:
+        names_column = categorical_cols[0]
+        
+        if len(numeric_cols) == 1:
+            # Single numeric column
+            values_column = numeric_cols[0]
+            fig = px.pie(df, names=names_column, values=values_column,
+                         title=f"Distribution of {values_column} by {names_column}",
+                         template="plotly_white")
+        else:
+            # Multiple numeric columns
+            fig = make_subplots(rows=len(numeric_cols), cols=1, 
+                                subplot_titles=[f"Distribution of {col} by {names_column}" for col in numeric_cols])
+            
+            for i, values_column in enumerate(numeric_cols, start=1):
+                pie_fig = px.pie(df, names=names_column, values=values_column,
+                                 title=f"Distribution of {values_column} by {names_column}")
+                for trace in pie_fig.traces:
+                    fig.add_trace(trace, row=i, col=1)
+            
+            fig.update_layout(height=400*len(numeric_cols), title_text="Pie Charts for Each Numeric Column")
+    else:
+        st.write("Insufficient columns for pie chart. Falling back to alternative visualization.")
+        fig = fallback_chart(df)
