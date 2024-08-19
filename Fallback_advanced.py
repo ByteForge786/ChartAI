@@ -49,14 +49,38 @@ def generate_chart(df, chart_recommendation):
 
         return fig
 
-    def create_multiple_plots(df, chart_type):
-        categorical_cols = df.select_dtypes(include=['object', 'category']).columns
-        numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
-        
-        if len(categorical_cols) == 0 or len(numeric_cols) == 0:
-            return fallback_chart(df)
+def create_multiple_plots(df, chart_type):
+    categorical_cols = df.select_dtypes(include=['object', 'category']).columns
+    numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
+    
+    if len(categorical_cols) == 0 or len(numeric_cols) == 0:
+        return fallback_chart(df)
 
-        figs = []
+    figs = []
+    
+    if len(categorical_cols) >= 3 and chart_type in ['bar', 'grouped bar']:
+        # Handle multiple categories for bar and grouped bar
+        main_cat = categorical_cols[0]
+        secondary_cats = categorical_cols[1:]
+        for num_col in numeric_cols:
+            if chart_type == 'bar':
+                fig = px.bar(df, x=main_cat, y=num_col, 
+                             color=secondary_cats[0],
+                             facet_col=secondary_cats[1] if len(secondary_cats) > 1 else None,
+                             facet_row=secondary_cats[2] if len(secondary_cats) > 2 else None,
+                             title=f"{num_col} by {', '.join(categorical_cols)}")
+            else:  # grouped bar
+                fig = px.bar(df, x=main_cat, y=num_col,
+                             color=secondary_cats[0],
+                             barmode='group',
+                             facet_col=secondary_cats[1] if len(secondary_cats) > 1 else None,
+                             facet_row=secondary_cats[2] if len(secondary_cats) > 2 else None,
+                             title=f"{num_col} by {', '.join(categorical_cols)}")
+            
+            fig.update_layout(xaxis_title=main_cat, yaxis_title=num_col)
+            figs.append(fig)
+    else:
+        # Original logic for other chart types or simpler category structures
         for cat_col in categorical_cols:
             for num_col in numeric_cols:
                 if chart_type == 'bar':
@@ -75,8 +99,8 @@ def generate_chart(df, chart_recommendation):
                 
                 fig.update_layout(xaxis_title=cat_col, yaxis_title=num_col)
                 figs.append(fig)
-        
-        return figs
+    
+    return figs
 
     try:
         if chart_recommendation is None:
