@@ -1,25 +1,7 @@
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import streamlit as st
-
-# In your main.py file
-
-# Create a single placeholder for all charts
-chart_placeholder = st.empty()
-
-# ... (your existing code to get df and chart_recommendation)
-
-figs = generate_chart(df, chart_recommendation)
-
-if figs:
-    # Create a container for all charts
-    with chart_placeholder.container():
-        for i, fig in enumerate(figs, 1):
-            st.plotly_chart(fig, use_container_width=True)
-            st.markdown(f"**Chart {i}**")  # Add a numbered label for each chart
-else:
-    chart_placeholder.write("No charts could be generated.")
+import pandas as pd
 
 def generate_chart(df, chart_recommendation):
     def fallback_chart(df):
@@ -49,59 +31,6 @@ def generate_chart(df, chart_recommendation):
 
         return fig
 
-def create_multiple_plots(df, chart_type):
-    categorical_cols = df.select_dtypes(include=['object', 'category']).columns
-    numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
-    
-    if len(categorical_cols) == 0 or len(numeric_cols) == 0:
-        return fallback_chart(df)
-
-    figs = []
-    
-    if len(categorical_cols) >= 3 and chart_type in ['bar', 'grouped bar']:
-        # Handle multiple categories for bar and grouped bar
-        main_cat = categorical_cols[0]
-        secondary_cats = categorical_cols[1:]
-        for num_col in numeric_cols:
-            if chart_type == 'bar':
-                fig = px.bar(df, x=main_cat, y=num_col, 
-                             color=secondary_cats[0],
-                             facet_col=secondary_cats[1] if len(secondary_cats) > 1 else None,
-                             facet_row=secondary_cats[2] if len(secondary_cats) > 2 else None,
-                             title=f"{num_col} by {', '.join(categorical_cols)}")
-            else:  # grouped bar
-                fig = px.bar(df, x=main_cat, y=num_col,
-                             color=secondary_cats[0],
-                             barmode='group',
-                             facet_col=secondary_cats[1] if len(secondary_cats) > 1 else None,
-                             facet_row=secondary_cats[2] if len(secondary_cats) > 2 else None,
-                             title=f"{num_col} by {', '.join(categorical_cols)}")
-            
-            fig.update_layout(xaxis_title=main_cat, yaxis_title=num_col)
-            figs.append(fig)
-    else:
-        # Original logic for other chart types or simpler category structures
-        for cat_col in categorical_cols:
-            for num_col in numeric_cols:
-                if chart_type == 'bar':
-                    fig = px.bar(df, x=cat_col, y=num_col, title=f"{num_col} by {cat_col}")
-                elif chart_type == 'grouped bar':
-                    fig = px.bar(df, x=cat_col, y=num_col, color=categorical_cols[0] if len(categorical_cols) > 1 else None,
-                                 title=f"{num_col} by {cat_col}", barmode='group')
-                elif chart_type == 'line':
-                    fig = px.line(df, x=cat_col, y=num_col, color=categorical_cols[0] if len(categorical_cols) > 1 else None,
-                                  title=f"{num_col} over {cat_col}", markers=True)
-                elif chart_type == 'scatter':
-                    fig = px.scatter(df, x=cat_col, y=num_col, color=categorical_cols[0] if len(categorical_cols) > 1 else None,
-                                     title=f"{num_col} vs {cat_col}")
-                else:
-                    fig = px.bar(df, x=cat_col, y=num_col, title=f"{num_col} by {cat_col}")
-                
-                fig.update_layout(xaxis_title=cat_col, yaxis_title=num_col)
-                figs.append(fig)
-    
-    return figs
-
     try:
         if chart_recommendation is None:
             chart_type = determine_chart_type(df)
@@ -111,59 +40,89 @@ def create_multiple_plots(df, chart_type):
         categorical_cols = df.select_dtypes(include=['object', 'category']).columns
         numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
 
-        if len(categorical_cols) > 1 or len(numeric_cols) > 1:
-            figs = create_multiple_plots(df, chart_type)
-        else:
-            x_column = df.columns[0]
-            y_columns = df.columns[1:]
+        if chart_type in ['grouped bar', 'bar']:
+            if len(categorical_cols) > 0 and len(numeric_cols) > 0:
+                x_column = categorical_cols[0]
+                y_column = numeric_cols[0]
+                
+                if len(categorical_cols) > 1:
+                    # Multiple categories and numeric column
+                    color_column = categorical_cols[1]
+                    fig = px.bar(df, x=x_column, y=y_column, 
+                                 color=color_column, barmode='group',
+                                 title=f"{y_column} by {x_column} and {color_column}",
+                                 template="plotly_white")
+                    
+                    if len(categorical_cols) > 2:
+                        fig.update_traces(hovertemplate='%{x}<br>%{y}<br>' + 
+                                          '<br>'.join([f'{col}: %{{customdata[{i}]}}' for i, col in enumerate(categorical_cols[2:])]))
+                        fig.update_traces(customdata=df[categorical_cols[2:]])
+                else:
+                    # Single category and numeric column
+                    fig = px.bar(df, x=x_column, y=y_column,
+                                 title=f"{y_column} by {x_column}",
+                                 template="plotly_white")
+                
+                fig.update_layout(xaxis_title=x_column, yaxis_title=y_column)
+            else:
+                st.write("Insufficient column types for bar chart. Falling back to alternative visualization.")
+                fig = fallback_chart(df)
 
-            if chart_type == 'grouped bar':
-                fig = px.bar(df, x=x_column, y=y_columns, 
-                             title=f"{', '.join(y_columns)} by {x_column}",
-                             template="plotly_white", barmode='group')
-                fig.update_layout(xaxis_title=x_column, yaxis_title="Values")
-
-            elif chart_type == 'bar':
-                fig = px.bar(df, x=x_column, y=y_columns[0],
-                             title=f"{y_columns[0]} by {x_column}",
-                             template="plotly_white")
-                fig.update_layout(xaxis_title=x_column, yaxis_title=y_columns[0])
-
-            elif chart_type == 'line':
+        elif chart_type == 'line':
+            if len(numeric_cols) > 0:
+                if len(categorical_cols) > 0:
+                    x_column = categorical_cols[0]
+                else:
+                    x_column = df.columns[0]
+                y_columns = numeric_cols
                 fig = px.line(df, x=x_column, y=y_columns,
                               title=f"{', '.join(y_columns)} over {x_column}",
                               template="plotly_white", markers=True)
                 fig.update_layout(xaxis_title=x_column, yaxis_title="Values")
+            else:
+                st.write("No numeric columns found for line chart. Falling back to alternative visualization.")
+                fig = fallback_chart(df)
 
-            elif chart_type == 'pie':
-                fig = px.pie(df, names=x_column, values=y_columns[0],
-                             title=f"Distribution of {y_columns[0]} by {x_column}",
+        elif chart_type == 'pie':
+            if len(categorical_cols) > 0 and len(numeric_cols) > 0:
+                names_column = categorical_cols[0]
+                values_column = numeric_cols[0]
+                fig = px.pie(df, names=names_column, values=values_column,
+                             title=f"Distribution of {values_column} by {names_column}",
                              template="plotly_white")
+            else:
+                st.write("Insufficient columns for pie chart. Falling back to alternative visualization.")
+                fig = fallback_chart(df)
 
-            elif chart_type == 'scatter':
-                fig = px.scatter(df, x=x_column, y=y_columns[0],
-                                 title=f"{y_columns[0]} vs {x_column}",
+        elif chart_type == 'scatter':
+            if len(numeric_cols) >= 2:
+                x_column = numeric_cols[0]
+                y_column = numeric_cols[1]
+                fig = px.scatter(df, x=x_column, y=y_column,
+                                 title=f"{y_column} vs {x_column}",
                                  template="plotly_white")
-                fig.update_layout(xaxis_title=x_column, yaxis_title=y_columns[0])
+                fig.update_layout(xaxis_title=x_column, yaxis_title=y_column)
+            else:
+                st.write("Insufficient numeric columns for scatter plot. Falling back to alternative visualization.")
+                fig = fallback_chart(df)
 
-            elif chart_type == 'histogram':
+        elif chart_type == 'histogram':
+            if len(numeric_cols) > 0:
+                x_column = numeric_cols[0]
                 fig = px.histogram(df, x=x_column,
                                    title=f"Distribution of {x_column}",
                                    template="plotly_white")
                 fig.update_layout(xaxis_title=x_column, yaxis_title="Count")
-
             else:
+                st.write("No numeric columns found for histogram. Falling back to alternative visualization.")
                 fig = fallback_chart(df)
 
-            figs = [fig]
+        else:
+            fig = fallback_chart(df)
 
-        if isinstance(figs, list):
-            for fig in figs:
-                fig.update_layout(plot_bgcolor="rgba(0,0,0,0)")
-            return figs
-        elif figs:
-            figs.update_layout(plot_bgcolor="rgba(0,0,0,0)")
-            return [figs]
+        if fig:
+            fig.update_layout(plot_bgcolor="rgba(0,0,0,0)")
+            st.plotly_chart(fig, use_container_width=True)
         
     except Exception as e:
         st.write(f"Error occurred while generating the recommended chart: {str(e)}")
@@ -171,12 +130,4 @@ def create_multiple_plots(df, chart_type):
         fig = fallback_chart(df)
         if fig:
             fig.update_layout(plot_bgcolor="rgba(0,0,0,0)")
-            return [fig]
-
-    return None
-
-# This function is not provided in the original code, so we'll add a placeholder
-def determine_chart_type(df):
-    # Add logic to determine chart type based on DataFrame structure
-    # For now, we'll return a default chart type
-    return 'bar'
+            st.plotly_chart(fig, use_container_width=True)
