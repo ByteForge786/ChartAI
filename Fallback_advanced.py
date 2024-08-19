@@ -4,6 +4,27 @@ from plotly.subplots import make_subplots
 import pandas as pd
 import streamlit as st
 
+
+
+def generate_chart(df, chart_recommendation, chart_placeholder):
+    # ... (previous code remains the same)
+
+    try:
+        # ... (previous code remains the same)
+
+        if fig:
+            fig.update_layout(plot_bgcolor="rgba(0,0,0,0)")
+            chart_placeholder.plotly_chart(fig, use_container_width=True)
+        
+    except Exception as e:
+        chart_placeholder.write(f"Error occurred while generating the recommended chart: {str(e)}")
+        chart_placeholder.write("Falling back to alternative visualizations...")
+        charts = create_multiple_charts(df)
+        for fig in charts:
+            fig.update_layout(plot_bgcolor="rgba(0,0,0,0)")
+            chart_placeholder.plotly_chart(fig, use_container_width=True)
+            chart_placeholder.markdown("---")  # Add a separator between charts
+
 def generate_chart(df, chart_recommendation):
     def analyze_df(df):
         date_cols = df.select_dtypes(include=['datetime64']).columns
