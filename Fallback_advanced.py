@@ -160,3 +160,55 @@ elif chart_type == 'pie':
     else:
         st.write("Insufficient columns for pie chart. Falling back to alternative visualization.")
         fig = fallback_chart(df)
+
+
+
+
+elif chart_type == 'line':
+    if len(numeric_cols) > 0:
+        # Identify the date column (assuming there's only one date column)
+        date_cols = df.select_dtypes(include=['datetime', 'datetime64']).columns.tolist()
+        
+        if len(date_cols) > 0:
+            x_column = date_cols[0]  # Use the date column for the x-axis
+        else:
+            x_column = df.columns[0]  # Fallback to the first column if no date columns are present
+        
+        if len(categorical_cols) > 0:
+            category_column = categorical_cols[0]  # Use the categorical column for color grouping
+        else:
+            category_column = None  # No categorical column for grouping
+        
+        y_columns = numeric_cols
+        
+        # Create a line chart with color differentiation based on the categorical column
+        if category_column:
+            fig = px.line(df, x=x_column, y=y_columns, color=category_column,
+                          title=f"{', '.join(y_columns)} over {x_column} grouped by {category_column}",
+                          template="plotly_white", markers=True)
+        else:
+            fig = px.line(df, x=x_column, y=y_columns,
+                          title=f"{', '.join(y_columns)} over {x_column}",
+                          template="plotly_white", markers=True)
+        
+        # Customize layout and hover information
+        fig.update_layout(
+            xaxis_title=x_column,
+            yaxis_title="Values",
+            legend_title=category_column if category_column else "Variables",  # Legend based on category if present
+            xaxis=dict(tickformat='%Y-%m-%d'),  # Custom date format for x-axis
+        )
+        
+        # Customize each trace (line)
+        for i, y_column in enumerate(y_columns):
+            fig.update_traces(
+                line=dict(width=2),  # Adjust line width
+                marker=dict(size=8),  # Adjust marker size
+                mode='lines+markers',  # Show both lines and markers
+                hovertemplate=f'{x_column}: %{{x|%Y-%m-%d}}<br>{y_column}: %{{y}}<extra></extra>',
+                selector=dict(name=y_column)  # Apply to the correct trace
+            )
+    else:
+        st.write("No numeric columns found for line chart. Falling back to alternative visualization.")
+        fig = fallback_chart(df)
+
