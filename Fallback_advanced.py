@@ -212,3 +212,53 @@ elif chart_type == 'line':
         st.write("No numeric columns found for line chart. Falling back to alternative visualization.")
         fig = fallback_chart(df)
 
+
+if chart_type in ['grouped bar', 'bar']:
+    if len(categorical_cols) > 0 and len(numeric_cols) > 0:
+        x_column = categorical_cols[0]  # First category for x-axis
+        
+        if len(categorical_cols) > 1:
+            # Multiple categories and numeric columns
+            color_column = categorical_cols[1]  # Second category for color differentiation
+            fig = go.Figure()
+            
+            for num_col in numeric_cols:
+                fig.add_trace(go.Bar(
+                    x=df[x_column],
+                    y=df[num_col],
+                    name=num_col,
+                    customdata=df[categorical_cols[2:]] if len(categorical_cols) > 2 else None,
+                    hovertemplate='%{x}<br>%{y}<br>' + 
+                                  '<br>'.join([f'{col}: %{{customdata[{i}]}}' for i, col in enumerate(categorical_cols[2:])]) if len(categorical_cols) > 2 else '%{x}<br>%{y}'
+                ))
+            
+            fig.update_layout(barmode='group',
+                              title=f"Comparison of {', '.join(numeric_cols)} by {x_column} and {color_column}",
+                              xaxis_title=x_column,
+                              yaxis_title="Values",
+                              template="plotly_white")
+            
+            if len(categorical_cols) > 2:
+                fig.for_each_trace(lambda t: t.update(customdata=df[categorical_cols[2:]]))
+        else:
+            # Single category and multiple numeric columns
+            fig = go.Figure()
+            for num_col in numeric_cols:
+                fig.add_trace(go.Bar(
+                    x=df[x_column],
+                    y=df[num_col],
+                    name=num_col
+                ))
+
+            fig.update_layout(barmode='group',
+                              title=f"Comparison of {', '.join(numeric_cols)} by {x_column}",
+                              xaxis_title=x_column,
+                              yaxis_title="Values",
+                              template="plotly_white")
+        
+        fig.update_layout(xaxis_title=x_column, yaxis_title="Values")
+    else:
+        st.write("Insufficient column types for bar chart. Falling back to alternative visualization.")
+        fig = fallback_chart(df)
+
+
