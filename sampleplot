@@ -1,0 +1,45 @@
+def plot_chart(df):
+    # Group the data and calculate rule counts
+    grouped = df.groupby(['concept', 'division', 'provider_name'])['rules'].sum().reset_index()
+
+    # Create subplots: one for each concept
+    concepts = grouped['concept'].unique()
+    fig = make_subplots(rows=len(concepts), cols=1, 
+                        subplot_titles=[f"Concept: {concept}" for concept in concepts],
+                        shared_xaxes=True, vertical_spacing=0.1)
+
+    # Color palette for divisions
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
+
+    # Plot data for each concept
+    for i, concept in enumerate(concepts, start=1):
+        concept_data = grouped[grouped['concept'] == concept]
+        
+        for j, division in enumerate(concept_data['division'].unique()):
+            division_data = concept_data[concept_data['division'] == division]
+            
+            fig.add_trace(
+                go.Bar(
+                    x=division_data['provider_name'],
+                    y=division_data['rules'],
+                    name=f"{division}",
+                    marker_color=colors[j % len(colors)],
+                    legendgroup=division,
+                    showlegend=True if i == 1 else False
+                ),
+                row=i, col=1
+            )
+
+    # Update layout
+    fig.update_layout(
+        barmode='group',
+        height=300 * len(concepts),
+        title_text="Rule Counts by Concept, Division, and Provider",
+        legend_title_text="Division",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    )
+
+    fig.update_xaxes(title_text="Provider Name", tickangle=45)
+    fig.update_yaxes(title_text="Rule Count")
+
+    return fig
